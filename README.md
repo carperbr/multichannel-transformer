@@ -7,8 +7,7 @@ The YT channel was terminated due to a coordinated barrage of copyright strikes 
 Snapshots folder has been updated with a new version. I have a third new version finishing up now that is doing even better, and a fourth model training on my second workstation which is doing even better than these. All checkpoints are found in the inference.py file in the corresponding snapshot folder, left as a comment with a mega.nz link that leads to a model.pth. If anyone has any issues with the checkpoints please let me know.
 
 Installation tips from the community with thanks to HunterThompson, PsychoticFrog, mesk and others for helping converge on these, will clean up requirements.txt soon:
-no output issues with gtx1660 (no tensor cores)
-https://discord.com/channels/1143212618006405170/1143212618492936292/1158172182246072400
+https://discord.com/channels/1143212618006405170/1143212618492936292/1148050453645508658
 
 TypeError: init() got an unexpected keyword argument 'dtype'
 pytorch is too old, update to 2.0.0+cu118
