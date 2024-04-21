@@ -1,0 +1,1 @@
+python inference.py --gpu 0 --input "G://input/Darko US - Dethmask, Pt. 2" --output "G://input/output/v9_730k_real_1.4mil_v5"
