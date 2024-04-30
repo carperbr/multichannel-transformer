@@ -159,10 +159,7 @@ def main():
     p.add_argument('--input', '-i', required=True)
     p.add_argument('--output', '-o', type=str, default="")
     p.add_argument('--output_format', type=str, default="flac")
-    p.add_argument('--num_res_encoders', type=int, default=4)
-    p.add_argument('--num_res_decoders', type=int, default=4)
     p.add_argument('--sr', '-r', type=int, default=44100)
-    p.add_argument('--n_fft', '-f', type=int, default=2048)
     p.add_argument('--hop_length', '-H', type=int, default=1024)
     p.add_argument('--batchsize', '-B', type=int, default=1)
     p.add_argument('--cropsize', '-c', type=int, default=4096)
@@ -172,35 +169,15 @@ def main():
     p.add_argument('--postprocess', '-p', action='store_true')
     p.add_argument('--create_webm', action='store_true')
     p.add_argument('--create_vocals', action='store_true')
-    p.add_argument('--num_encoders', type=int, default=2)
-    p.add_argument('--num_decoders', type=int, default=13)
-    # p.add_argument('--tta', '-t', action='store_true')
-    p.add_argument('--cropsizes', type=str, default='128,256,512,1024')
-    p.add_argument('--depth', type=int, default=7)
-    p.add_argument('--num_transformer_blocks', type=int, default=2)
-    p.add_argument('--bias', type=str, default='true')
-    p.add_argument('--rename_dir', type=str, default='false')
-    
-    p.add_argument('--num_attention_maps', type=int, default=1)
-    p.add_argument('--channels', type=int, default=8)
-    p.add_argument('--num_bridge_layers', type=int, default=4)
-    p.add_argument('--latent_expansion', type=int, default=4)
-    p.add_argument('--expansion', type=float, default=2.2)
-    p.add_argument('--num_heads', type=int, default=8)
-    p.add_argument('--dropout', type=float, default=0.2)
-    p.add_argument('--weight_decay', type=float, default=1e-2)
-
+    p.add_argument('--rename_dir', action='store_true')
     p.add_argument('--seed', type=int, default=1)
-
-    p.add_argument('--num_res_blocks', type=int, default=1)
-    p.add_argument('--feedforward_expansion', type=int, default=24)
+    p.add_argument('--model_in_filename', action='store_true')
+    # p.add_argument('--tta', '-t', action='store_true') # will add back eventually, need to experiment more with some new TTA techniques
 
     args = p.parse_args()
-    args.cropsizes = [int(cropsize) for cropsize in args.cropsizes.split(',')]
     args.models = [model for model in args.models.split(',')]
-    args.rename_dir = str.lower(args.rename_dir) == 'true'
 
-    print('loading model...', end=' ')
+    print('loading model...')
     device = torch.device('cpu')
 
     np.random.seed(args.seed)
@@ -287,14 +264,14 @@ def main():
             X = np.asarray([X, X])
 
         print('stft of wave source...', end=' ')
-        X_spec = spec_utils.wave_to_spectrogram(X, args.hop_length, args.n_fft)
+        X_spec = spec_utils.wave_to_spectrogram(X, args.hop_length, 2048)
         print('done')
 
         y_specs = []
         v_specs = []
 
         for model in models:
-            sp = Separator(model, device, args.batchsize, args.cropsize, args.n_fft, args.postprocess, model.autoregressive)
+            sp = Separator(model, device, args.batchsize, args.cropsize, 2048, args.postprocess, model.autoregressive)
             y_spec, v_spec, _ = sp.separate(X_spec, padding=args.padding)
             y_specs.append(y_spec)
             v_specs.append(v_spec)
@@ -310,11 +287,15 @@ def main():
 
         y_spec = y_mag * np.exp(1.j * y_phase)
         v_spec = v_mag * np.exp(1.j * v_phase)
+        
+        filename_suffix = ''
+        if args.model_in_filename:
+            filename_suffix = filename_suffix.join(args.models).upper()
 
         print('\ninverse stft of instruments...', end=' ')
         wave = spec_utils.spectrogram_to_wave(y_spec, hop_length=args.hop_length)
         print('done')
-        inst_file = f'{output_folder}/{basename}_Instruments.{output_format}'
+        inst_file = f'{output_folder}/{basename}_Instruments{filename_suffix}.{output_format}'
         sf.write(inst_file, wave.T, sr)
 
         filetags = music_tag.load_file(file)
@@ -335,9 +316,9 @@ def main():
             print('\ninverse stft of vocals...', end=' ')
             wave = spec_utils.spectrogram_to_wave(v_spec, hop_length=args.hop_length)
             print('done')
-            sf.write(f'{output_folder}/{basename}_Vocals.{output_format}', wave.T, sr)
+            sf.write(f'{output_folder}/{basename}_Vocals{filename_suffix}.{output_format}', wave.T, sr)
 
-            vocal_tags = music_tag.load_file(f'{output_folder}/{basename}_Vocals.{output_format}')
+            vocal_tags = music_tag.load_file(f'{output_folder}/{basename}_Vocals{filename_suffix}.{output_format}')
             vocal_tags['tracktitle'] = f'{filetags["tracktitle"]} (Vocals)'
             vocal_tags['album'] = f'{filetags["album"]} (Vocals)'
             vocal_tags['artist'] = filetags['artist']
